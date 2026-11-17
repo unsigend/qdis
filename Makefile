@@ -72,7 +72,8 @@ else
 endif
 
 line:
-	@find . -name '*.go' -not -path './vendor/*' | sort | xargs wc -l 2>/dev/null || echo "  skip  no Go files yet"
+	@files=$$(find . -name '*.go' ! -name '*_test.go' ! -path './vendor/*' ! -path './.git/*' 2>/dev/null | sort); \
+	if [ -z "$$files" ]; then echo "  skip  no Go files yet"; else awk -f scripts/line.awk $$files; fi
 
 clean:
 	@rm -rf $(BINDIR)
@@ -94,7 +95,7 @@ help:
 	@echo "\tmake vet                 - run go vet"
 	@echo "\tmake check               - format, vet, and lint"
 	@echo "\tmake clean               - remove the build directory"
-	@echo "\tmake line                - count lines of Go source"
+	@echo "\tmake line                - count implementation lines"
 	@echo "\tmake version             - print the project version"
 	@echo "\tmake help                - show this help message"
 	@echo ""

@@ -17,7 +17,7 @@ make fmt                 - format Go sources
 make vet                 - run go vet
 make check               - format, vet, and lint
 make clean               - remove the build directory
-make line                - count lines of Go source
+make line                - count implementation lines
 make version             - print the project version
 make help                - show this help message
 ```

@@ -5,8 +5,19 @@
 // Package main is the main package for the qdis server.
 package main
 
-import "fmt"
+import (
+	"flag"
+	"fmt"
+)
+
+const (
+	defaultAddr = "127.0.0.1:6379"
+)
 
 func main() {
-	fmt.Println("Hello, qdis!")
+	addr := flag.String("addr", defaultAddr, "listen address")
+
+	flag.Parse()
+
+	fmt.Println("Listening on", *addr)
 }
