@@ -1,0 +1,102 @@
+version: "2"
+run:
+  modules-download-mode: readonly
+  tests: true
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - durationcheck
+    - errcheck
+    - errorlint
+    - goconst
+    - govet
+    - ineffassign
+    - makezero
+    - misspell
+    - nakedret
+    - predeclared
+    - reassign
+    - revive
+    - staticcheck
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - wastedassign
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    nakedret:
+      max-func-lines: 8
+    revive:
+      severity: error
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: var-naming
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: superfluous-else
+        - name: redefines-builtin-id
+    staticcheck:
+      checks:
+        - all
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - goconst
+          - revive
+        path: _test\.go
+        text: package-comments
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/unsigend/qdis
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
