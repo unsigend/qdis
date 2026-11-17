@@ -7,7 +7,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
+
+	"github.com/unsigend/qdis/internal/server"
 )
 
 const (
@@ -19,5 +21,8 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Println("Listening on", *addr)
+	s := server.New(*addr)
+	if err := s.ListenAndServe(); err != nil {
+		log.Fatalf("failed to listen and serve: %v", err)
+	}
 }
