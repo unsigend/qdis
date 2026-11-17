@@ -21,7 +21,7 @@ func main() {
 
 	flag.Parse()
 
-	s := server.New(*addr)
+	s := server.NewServer(*addr)
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatalf("failed to listen and serve: %v", err)
 	}

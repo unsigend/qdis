@@ -6,6 +6,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -18,8 +19,8 @@ type Server struct {
 	addr string
 }
 
-// New creates a new server.
-func New(addr string) *Server {
+// NewServer creates a new server.
+func NewServer(addr string) *Server {
 	return &Server{
 		addr: addr,
 	}
@@ -34,6 +35,7 @@ func serve(conn net.Conn) error {
 	}()
 
 	r := resp.NewReader(conn)
+	w := resp.NewWriter(conn)
 
 	for {
 		cmd, err := r.ReadCmd()
@@ -41,10 +43,33 @@ func serve(conn net.Conn) error {
 			return err
 		}
 
-		// TODO: Handle command in cmd tables. For now just echo the command.
-		fmt.Println(cmd)
+		command, err := NewCommandRaw(cmd)
+		if err != nil {
+			return err
+		}
+
+		if err := command.RunCommand(w); err != nil {
+			if errors.Is(err, ErrInvalidCommand) { // unknown command
+				errstr := fmt.Sprintf("ERR unknown command '%s'", command.Name)
+				if werr := w.WriteError(errstr); werr != nil {
+					return werr
+				}
+			} else if errors.Is(err, ErrQuit) { // quit command
+				if ferr := w.Flush(); ferr != nil {
+					return ferr
+				}
+				break
+			} else {
+				return err
+			}
+		}
+
+		if err := w.Flush(); err != nil {
+			return err
+		}
 	}
 
+	return nil
 }
 
 // ListenAndServe listens on the TCP network address s.addr and serves requests
