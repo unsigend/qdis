@@ -24,6 +24,25 @@ make help                - show this help message
 
 Build output goes to `build/`.
 
+## Commands
+
+Syntax matches Redis. Only listed forms are implemented.
+
+**Connection**
+
+```
+PING [message]
+ECHO message
+QUIT
+```
+
+**String**
+
+```
+SET key value
+GET key
+```
+
 ## Contribution and Copyright
 
 Contributions are welcome. Copyright (C) 2026–2027 Yixiang Qiu. qdis is released under the GNU GPL v3. See `LICENSE`.

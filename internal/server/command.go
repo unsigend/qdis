@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/unsigend/qdis/internal/resp"
+	"github.com/unsigend/qdis/internal/store"
 )
 
 // ErrInvalidCommand is returned when a command is invalid.
@@ -50,7 +51,7 @@ func NewCommandRaw(raw [][]byte) (*Command, error) {
 }
 
 // ping runs the PING command.
-func (c *Command) ping(w *resp.Writer) error {
+func (c *Command) ping(w *resp.Writer, _ *store.Store) error {
 	if len(c.Args) == 0 {
 		return w.WriteString("PONG")
 	}
@@ -61,7 +62,7 @@ func (c *Command) ping(w *resp.Writer) error {
 }
 
 // echo runs the ECHO command.
-func (c *Command) echo(w *resp.Writer) error {
+func (c *Command) echo(w *resp.Writer, _ *store.Store) error {
 	if len(c.Args) != 1 {
 		return w.WriteError("ERR wrong number of arguments for 'echo' command")
 	}
@@ -69,25 +70,48 @@ func (c *Command) echo(w *resp.Writer) error {
 }
 
 // quit runs the QUIT command.
-func (c *Command) quit(w *resp.Writer) error {
+func (c *Command) quit(w *resp.Writer, _ *store.Store) error {
 	if err := w.WriteString("OK"); err != nil {
 		return err
 	}
 	return ErrQuit
 }
 
+// set runs the SET command.
+func (c *Command) set(w *resp.Writer, store *store.Store) error {
+	if len(c.Args) != 2 {
+		return w.WriteError("ERR wrong number of arguments for 'set' command")
+	}
+	store.Set(c.Args[0], c.Args[1])
+	return w.WriteString("OK")
+}
+
+// get runs the GET command.
+func (c *Command) get(w *resp.Writer, store *store.Store) error {
+	if len(c.Args) != 1 {
+		return w.WriteError("ERR wrong number of arguments for 'get' command")
+	}
+	v, err := store.Get(c.Args[0])
+	if err != nil {
+		return w.WriteBulk(nil)
+	}
+	return w.WriteBulk([]byte(v))
+}
+
 // cmdtable is a table of commands.
-var cmdtable = map[string]func(*Command, *resp.Writer) error{
+var cmdtable = map[string]func(*Command, *resp.Writer, *store.Store) error{
 	"PING": (*Command).ping,
 	"ECHO": (*Command).echo,
 	"QUIT": (*Command).quit,
+	"SET":  (*Command).set,
+	"GET":  (*Command).get,
 }
 
 // RunCommand runs a command.
-func (c *Command) RunCommand(w *resp.Writer) error {
+func (c *Command) RunCommand(w *resp.Writer, store *store.Store) error {
 	cmd, ok := cmdtable[strings.ToUpper(c.Name)]
 	if !ok {
 		return ErrInvalidCommand
 	}
-	return cmd(c, w)
+	return cmd(c, w, store)
 }

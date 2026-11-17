@@ -12,22 +12,25 @@ import (
 	"net"
 
 	"github.com/unsigend/qdis/internal/resp"
+	"github.com/unsigend/qdis/internal/store"
 )
 
 // Server is the qdis server.
 type Server struct {
-	addr string
+	addr  string
+	store *store.Store
 }
 
 // NewServer creates a new server.
-func NewServer(addr string) *Server {
+func NewServer(addr string, store *store.Store) *Server {
 	return &Server{
-		addr: addr,
+		addr:  addr,
+		store: store,
 	}
 }
 
 // serve serves a single connection.
-func serve(conn net.Conn) error {
+func serve(conn net.Conn, store *store.Store) error {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Printf("failed to close connection: %v", err)
@@ -48,7 +51,7 @@ func serve(conn net.Conn) error {
 			return err
 		}
 
-		if err := command.RunCommand(w); err != nil {
+		if err := command.RunCommand(w, store); err != nil {
 			if errors.Is(err, ErrInvalidCommand) { // unknown command
 				errstr := fmt.Sprintf("ERR unknown command '%s'", command.Name)
 				if werr := w.WriteError(errstr); werr != nil {
@@ -94,7 +97,7 @@ func (s *Server) ListenAndServe() error {
 
 		// Connection model is goroutine-based, one connection per goroutine.
 		go func() {
-			if err := serve(conn); err != nil {
+			if err := serve(conn, s.store); err != nil {
 				log.Printf("failed to serve connection: %v", err)
 			}
 		}()

@@ -9,6 +9,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/unsigend/qdis/internal/store"
 )
 
 func TestServePipeline(t *testing.T) {
@@ -29,7 +31,7 @@ func TestServePipeline(t *testing.T) {
 	}
 
 	go func() {
-		if err := serve(c2); err != nil {
+		if err := serve(c2, store.NewStore()); err != nil {
 			return
 		}
 	}()

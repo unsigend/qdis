@@ -10,6 +10,7 @@ import (
 	"log"
 
 	"github.com/unsigend/qdis/internal/server"
+	"github.com/unsigend/qdis/internal/store"
 )
 
 const (
@@ -18,10 +19,11 @@ const (
 
 func main() {
 	addr := flag.String("addr", defaultAddr, "listen address")
-
 	flag.Parse()
 
-	s := server.NewServer(*addr)
+	store := store.NewStore()
+
+	s := server.NewServer(*addr, store)
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatalf("failed to listen and serve: %v", err)
 	}
