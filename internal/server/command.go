@@ -6,6 +6,7 @@ package server
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/unsigend/qdis/internal/resp"
@@ -78,20 +79,20 @@ func (c *Command) quit(w *resp.Writer, _ *store.Store) error {
 }
 
 // set runs the SET command.
-func (c *Command) set(w *resp.Writer, store *store.Store) error {
+func (c *Command) set(w *resp.Writer, st *store.Store) error {
 	if len(c.Args) != 2 {
 		return w.WriteError("ERR wrong number of arguments for 'set' command")
 	}
-	store.Set(c.Args[0], c.Args[1])
+	st.Set(c.Args[0], c.Args[1])
 	return w.WriteString("OK")
 }
 
 // get runs the GET command.
-func (c *Command) get(w *resp.Writer, store *store.Store) error {
+func (c *Command) get(w *resp.Writer, st *store.Store) error {
 	if len(c.Args) != 1 {
 		return w.WriteError("ERR wrong number of arguments for 'get' command")
 	}
-	v, err := store.Get(c.Args[0])
+	v, err := st.Get(c.Args[0])
 	if err != nil {
 		return w.WriteBulk(nil)
 	}
@@ -99,29 +100,29 @@ func (c *Command) get(w *resp.Writer, store *store.Store) error {
 }
 
 // del runs the DEL command.
-func (c *Command) del(w *resp.Writer, store *store.Store) error {
+func (c *Command) del(w *resp.Writer, st *store.Store) error {
 	if len(c.Args) < 1 {
 		return w.WriteError("ERR wrong number of arguments for 'del' command")
 	}
-	n := store.DeleteMany(c.Args...)
+	n := st.DeleteMany(c.Args...)
 	return w.WriteInt(int64(n))
 }
 
 // exists runs the EXISTS command.
-func (c *Command) exists(w *resp.Writer, store *store.Store) error {
+func (c *Command) exists(w *resp.Writer, st *store.Store) error {
 	if len(c.Args) < 1 {
 		return w.WriteError("ERR wrong number of arguments for 'exists' command")
 	}
-	n := store.Exists(c.Args...)
+	n := st.Exists(c.Args...)
 	return w.WriteInt(int64(n))
 }
 
 // typeCmd runs the TYPE command.
-func (c *Command) typeCmd(w *resp.Writer, store *store.Store) error {
+func (c *Command) typeCmd(w *resp.Writer, st *store.Store) error {
 	if len(c.Args) != 1 {
 		return w.WriteError("ERR wrong number of arguments for 'type' command")
 	}
-	_, err := store.Get(c.Args[0])
+	_, err := st.Get(c.Args[0])
 	if err != nil {
 		return w.WriteString("none")
 	}
@@ -129,20 +130,155 @@ func (c *Command) typeCmd(w *resp.Writer, store *store.Store) error {
 }
 
 // dbsize runs the DBSIZE command.
-func (c *Command) dbsize(w *resp.Writer, store *store.Store) error {
+func (c *Command) dbsize(w *resp.Writer, st *store.Store) error {
 	if len(c.Args) != 0 {
 		return w.WriteError("ERR wrong number of arguments for 'dbsize' command")
 	}
-	return w.WriteInt(int64(store.Size()))
+	return w.WriteInt(int64(st.Size()))
 }
 
 // flushdb runs the FLUSHDB command.
-func (c *Command) flushdb(w *resp.Writer, store *store.Store) error {
+func (c *Command) flushdb(w *resp.Writer, st *store.Store) error {
 	if len(c.Args) != 0 {
 		return w.WriteError("ERR syntax error")
 	}
-	store.Drop()
+	st.Drop()
 	return w.WriteString("OK")
+}
+
+// keys runs the KEYS command.
+func (c *Command) keys(w *resp.Writer, st *store.Store) error {
+	if len(c.Args) != 1 {
+		return w.WriteError("ERR wrong number of arguments for 'keys' command")
+	}
+	pattern := c.Args[0]
+	keys, err := st.Keys(pattern)
+	if err != nil {
+		return w.WriteError("ERR invalid pattern")
+	}
+	err = w.WriteArray(len(keys))
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		err = w.WriteBulk([]byte(key))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// incr runs the INCR command.
+func (c *Command) incr(w *resp.Writer, st *store.Store) error {
+	if len(c.Args) != 1 {
+		return w.WriteError("ERR wrong number of arguments for 'incr' command")
+	}
+	n, err := st.Incr(c.Args[0], 1)
+	if err != nil {
+		if errors.Is(err, store.ErrNotInt) {
+			return w.WriteError("ERR value is not an integer or out of range")
+		}
+		if errors.Is(err, store.ErrOverflow) {
+			return w.WriteError("ERR increment or decrement would overflow")
+		}
+		return err
+	}
+	return w.WriteInt(n)
+}
+
+// incrby runs the INCRBY command.
+func (c *Command) incrby(w *resp.Writer, st *store.Store) error {
+	if len(c.Args) != 2 {
+		return w.WriteError("ERR wrong number of arguments for 'incrby' command")
+	}
+
+	// check if the value is a valid integer
+	// +8, 08, -08, 008, etc. are invalid
+	if strings.HasPrefix(c.Args[1], "+") ||
+		(len(c.Args[1]) > 1 && c.Args[1][0] == '0') ||
+		(len(c.Args[1]) > 1 && c.Args[1][0] == '-' && c.Args[1][1] == '0') {
+		return w.WriteError("ERR value is not an integer or out of range")
+	}
+
+	delta, err := strconv.ParseInt(c.Args[1], 10, 64)
+	if err != nil {
+		return w.WriteError("ERR value is not an integer or out of range")
+	}
+	n, err := st.Incr(c.Args[0], delta)
+	if err != nil {
+		if errors.Is(err, store.ErrNotInt) {
+			return w.WriteError("ERR value is not an integer or out of range")
+		}
+		if errors.Is(err, store.ErrOverflow) {
+			return w.WriteError("ERR increment or decrement would overflow")
+		}
+		return err
+	}
+	return w.WriteInt(n)
+}
+
+// append runs the APPEND command.
+func (c *Command) append(w *resp.Writer, st *store.Store) error {
+	if len(c.Args) != 2 {
+		return w.WriteError("ERR wrong number of arguments for 'append' command")
+	}
+	n, err := st.Append(c.Args[0], c.Args[1])
+	if err != nil {
+		return err
+	}
+	return w.WriteInt(int64(n))
+}
+
+// mset runs the MSET command.
+func (c *Command) mset(w *resp.Writer, st *store.Store) error {
+	if len(c.Args) == 0 || len(c.Args)%2 != 0 {
+		return w.WriteError("ERR wrong number of arguments for 'mset' command")
+	}
+
+	keys := make([]string, 0, len(c.Args)/2)
+	values := make([]string, 0, len(c.Args)/2)
+
+	for i := 0; i < len(c.Args); i += 2 {
+		keys = append(keys, c.Args[i])
+		values = append(values, c.Args[i+1])
+	}
+
+	// must succeed
+	err := st.SetMany(keys, values)
+	if err != nil {
+		return err
+	}
+
+	return w.WriteString("OK")
+}
+
+// mget runs the MGET command.
+func (c *Command) mget(w *resp.Writer, st *store.Store) error {
+	if len(c.Args) == 0 {
+		return w.WriteError("ERR wrong number of arguments for 'mget' command")
+	}
+	values, exists := st.GetMany(c.Args...)
+
+	err := w.WriteArray(len(values))
+	if err != nil {
+		return err
+	}
+
+	for i, value := range values {
+		if exists[i] {
+			err = w.WriteBulk([]byte(value))
+			if err != nil {
+				return err
+			}
+		} else {
+			err = w.WriteBulk(nil)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // cmdtable is a table of commands.
@@ -157,6 +293,12 @@ var cmdtable = map[string]func(*Command, *resp.Writer, *store.Store) error{
 	"TYPE":    (*Command).typeCmd,
 	"DBSIZE":  (*Command).dbsize,
 	"FLUSHDB": (*Command).flushdb,
+	"KEYS":    (*Command).keys,
+	"INCR":    (*Command).incr,
+	"INCRBY":  (*Command).incrby,
+	"APPEND":  (*Command).append,
+	"MSET":    (*Command).mset,
+	"MGET":    (*Command).mget,
 }
 
 // RunCommand runs a command.

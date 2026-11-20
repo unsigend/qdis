@@ -62,6 +62,10 @@ Return: integer, number of keys in the current database.
 Remove all keys from the current database.  
 Return: simple string `OK`.
 
+**`KEYS`** `pattern`  
+List keys matching glob `*`, `?`, `[abc]`. Order is undefined.  
+Return: array of bulk strings.
+
 ### String
 
 **`SET`** `key value`  
@@ -71,6 +75,26 @@ Return: simple string `OK`.
 **`GET`** `key`  
 Get the string value of key.  
 Return: bulk string, or Nil when key does not exist.
+
+**`INCR`** `key`  
+Increment the integer value of key by one. Missing key starts at `0`.  
+Return: integer, the new value.
+
+**`INCRBY`** `key increment`  
+Increment the integer value of key by `increment`. Missing key starts at `0`.  
+Return: integer, the new value.
+
+**`APPEND`** `key value`  
+Append `value` to the string at key. Missing key is created.  
+Return: integer, the new length of the string.
+
+**`MSET`** `key value [key value ...]`  
+Set each key to its value. All pairs are written under one lock.  
+Return: simple string `OK`.
+
+**`MGET`** `key [key ...]`  
+Get the values of all given keys.  
+Return: array of bulk strings; Nil for keys that do not exist.
 
 
 
