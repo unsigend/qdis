@@ -98,13 +98,65 @@ func (c *Command) get(w *resp.Writer, store *store.Store) error {
 	return w.WriteBulk([]byte(v))
 }
 
+// del runs the DEL command.
+func (c *Command) del(w *resp.Writer, store *store.Store) error {
+	if len(c.Args) < 1 {
+		return w.WriteError("ERR wrong number of arguments for 'del' command")
+	}
+	n := store.DeleteMany(c.Args...)
+	return w.WriteInt(int64(n))
+}
+
+// exists runs the EXISTS command.
+func (c *Command) exists(w *resp.Writer, store *store.Store) error {
+	if len(c.Args) < 1 {
+		return w.WriteError("ERR wrong number of arguments for 'exists' command")
+	}
+	n := store.Exists(c.Args...)
+	return w.WriteInt(int64(n))
+}
+
+// typeCmd runs the TYPE command.
+func (c *Command) typeCmd(w *resp.Writer, store *store.Store) error {
+	if len(c.Args) != 1 {
+		return w.WriteError("ERR wrong number of arguments for 'type' command")
+	}
+	_, err := store.Get(c.Args[0])
+	if err != nil {
+		return w.WriteString("none")
+	}
+	return w.WriteString("string")
+}
+
+// dbsize runs the DBSIZE command.
+func (c *Command) dbsize(w *resp.Writer, store *store.Store) error {
+	if len(c.Args) != 0 {
+		return w.WriteError("ERR wrong number of arguments for 'dbsize' command")
+	}
+	return w.WriteInt(int64(store.Size()))
+}
+
+// flushdb runs the FLUSHDB command.
+func (c *Command) flushdb(w *resp.Writer, store *store.Store) error {
+	if len(c.Args) != 0 {
+		return w.WriteError("ERR syntax error")
+	}
+	store.Drop()
+	return w.WriteString("OK")
+}
+
 // cmdtable is a table of commands.
 var cmdtable = map[string]func(*Command, *resp.Writer, *store.Store) error{
-	"PING": (*Command).ping,
-	"ECHO": (*Command).echo,
-	"QUIT": (*Command).quit,
-	"SET":  (*Command).set,
-	"GET":  (*Command).get,
+	"PING":    (*Command).ping,
+	"ECHO":    (*Command).echo,
+	"QUIT":    (*Command).quit,
+	"SET":     (*Command).set,
+	"GET":     (*Command).get,
+	"DEL":     (*Command).del,
+	"EXISTS":  (*Command).exists,
+	"TYPE":    (*Command).typeCmd,
+	"DBSIZE":  (*Command).dbsize,
+	"FLUSHDB": (*Command).flushdb,
 }
 
 // RunCommand runs a command.

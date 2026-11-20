@@ -51,3 +51,46 @@ func (s *Store) Delete(key string) {
 	defer s.mu.Unlock()
 	delete(s.db, key)
 }
+
+// DeleteMany deletes multiple keys from the store.
+// It returns the number of keys deleted.
+func (s *Store) DeleteMany(keys ...string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for _, key := range keys {
+		if _, ok := s.db[key]; ok {
+			delete(s.db, key)
+			n++
+		}
+	}
+	return n
+}
+
+// Exists checks if multiple keys exist in the store.
+// It returns the number of keys that exist.
+func (s *Store) Exists(keys ...string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for _, key := range keys {
+		if _, ok := s.db[key]; ok {
+			n++
+		}
+	}
+	return n
+}
+
+// Size returns the number of keys in the store.
+func (s *Store) Size() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.db)
+}
+
+// Drop drops the store.
+func (s *Store) Drop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.db = make(map[string]string)
+}

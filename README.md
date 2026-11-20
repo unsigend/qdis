@@ -28,20 +28,49 @@ Build output goes to `build/`.
 
 Syntax matches Redis. Only listed forms are implemented.
 
-**Connection**
+### Connection
 
-```
-PING [message]
-ECHO message
-QUIT
-```
+**`PING`** `[message]`  
+Return: simple string `PONG`, or bulk string if a message is given.
 
-**String**
+**`ECHO`** `message`  
+Return: bulk string reply of `message`.
 
-```
-SET key value
-GET key
-```
+**`QUIT`**  
+Return: simple string `OK`. The connection is then closed.
+
+### Generic
+
+**`DEL`** `key [key ...]`  
+Remove the given keys. Missing keys are ignored.  
+Return: integer, number of keys that were removed.
+
+**`EXISTS`** `key [key ...]`  
+Count how many of the given keys exist. Repeated names are counted again.  
+Return: integer, number of existing keys among the arguments.
+
+**`TYPE`** `key`  
+Return the type of the value stored at key.  
+Return: simple string `string`, or `none` if the key does not exist.
+
+**`DBSIZE`**  
+Return: integer, number of keys in the current database.
+
+**`FLUSHDB`**  
+Remove all keys from the current database.  
+Return: simple string `OK`.
+
+### String
+
+**`SET`** `key value`  
+Set key to hold the string value. Overwrites any existing value.  
+Return: simple string `OK`.
+
+**`GET`** `key`  
+Get the string value of key.  
+Return: bulk string, or Nil when key does not exist.
+
+
 
 ## Contribution and Copyright
 
