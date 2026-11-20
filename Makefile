@@ -14,7 +14,7 @@ GOFILES    := $(shell find . -name '*.go' -not -path './vendor/*' -not -path './
 
 .DEFAULT_GOAL := help
 
-.PHONY: all build test race fmt vet check clean line version help
+.PHONY: all build test race fmt fmtcheck vet check ci clean line version help
 
 all: build
 
@@ -50,6 +50,15 @@ else
 	@echo "  FMT   ok"
 endif
 
+fmtcheck:
+ifeq ($(strip $(GOFILES)),)
+	@echo "  skip  no Go files yet"
+else
+	@unformatted=$$(gofmt -s -l $(GOFILES)); \
+	if [ -n "$$unformatted" ]; then echo "$$unformatted"; exit 1; fi; \
+	echo "  FMT   check ok"
+endif
+
 vet:
 ifeq ($(strip $(GOFILES)),)
 	@echo "  skip  no Go files yet"
@@ -69,6 +78,19 @@ else
 	}
 	@$(GOLANGCI) run $(PKG)
 	@echo "  LINT  ok"
+endif
+
+ci: fmtcheck vet
+ifeq ($(strip $(GOFILES)),)
+	@echo "  skip  no Go files yet"
+else
+	@command -v $(GOLANGCI) >/dev/null 2>&1 || { \
+		echo "  ERR   $(GOLANGCI) not found"; \
+		exit 1; \
+	}
+	@$(GOLANGCI) run $(PKG)
+	@$(GO) test $(PKG)
+	@echo "  CI    ok"
 endif
 
 line:
@@ -92,8 +114,10 @@ help:
 	@echo "\tmake test                - run the test suite"
 	@echo "\tmake race                - run tests with the race detector"
 	@echo "\tmake fmt                 - format Go sources"
+	@echo "\tmake fmtcheck            - fail if sources are unformatted"
 	@echo "\tmake vet                 - run go vet"
 	@echo "\tmake check               - format, vet, and lint"
+	@echo "\tmake ci                  - fmtcheck, vet, lint, and test"
 	@echo "\tmake clean               - remove the build directory"
 	@echo "\tmake line                - count implementation lines"
 	@echo "\tmake version             - print the project version"

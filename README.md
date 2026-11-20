@@ -14,8 +14,10 @@ make build               - build the server binary
 make test                - run the test suite
 make race                - run tests with the race detector
 make fmt                 - format Go sources
+make fmtcheck            - fail if sources are unformatted
 make vet                 - run go vet
 make check               - format, vet, and lint
+make ci                  - fmtcheck, vet, lint, and test
 make clean               - remove the build directory
 make line                - count implementation lines
 make version             - print the project version
